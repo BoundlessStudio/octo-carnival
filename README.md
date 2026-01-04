@@ -51,10 +51,10 @@ pnpm dlx shadcn@latest add button
 ```
 
 
-## Setting up WorkOS
+## Setting up Auth0
 
-- Set the `VITE_WORKOS_CLIENT_ID` in your `.env.local`.
-
+- Set `VITE_AUTH0_DOMAIN` and `VITE_AUTH0_CLIENT_ID` in your `.env.local`.
+- Optionally set `VITE_AUTH0_AUDIENCE` if you need API authorization scopes.
 
 
 ## Routing

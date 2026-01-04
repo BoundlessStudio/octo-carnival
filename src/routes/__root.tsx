@@ -7,7 +7,7 @@ import {
 //import { TanStackDevtools } from '@tanstack/react-devtools'
 //import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
 import Header from '@/components/header'
-import WorkOSProvider from '../integrations/workos/provider'
+import Auth0Provider from '../integrations/auth0/provider'
 import appCss from '../styles.css?url'
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -47,10 +47,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <WorkOSProvider>
+        <Auth0Provider>
           <Header />
           {children}
-          {/* 
+          {/*
           <TanStackDevtools
             config={{
               position: 'bottom-right',
@@ -62,9 +62,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               },
               TanStackQueryDevtools,
             ]}
-          /> 
+          />
           */}
-        </WorkOSProvider>
+        </Auth0Provider>
         <Scripts />
       </body>
     </html>

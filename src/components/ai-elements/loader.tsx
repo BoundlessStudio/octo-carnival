@@ -1,20 +1,23 @@
 import { cn } from "@/lib/utils";
-import type { HTMLAttributes } from "react";
+import { type HTMLAttributes, useId } from "react";
 
 type LoaderIconProps = {
   size?: number;
 };
 
-const LoaderIcon = ({ size = 16 }: LoaderIconProps) => (
-  <svg
-    height={size}
-    strokeLinejoin="round"
-    style={{ color: "currentcolor" }}
-    viewBox="0 0 16 16"
-    width={size}
-  >
-    <title>Loader</title>
-    <g clipPath="url(#clip0_2393_1490)">
+const LoaderIcon = ({ size = 16 }: LoaderIconProps) => {
+  const clipPathId = useId();
+
+  return (
+    <svg
+      height={size}
+      strokeLinejoin="round"
+      style={{ color: "currentcolor" }}
+      viewBox="0 0 16 16"
+      width={size}
+    >
+      <title>Loader</title>
+      <g clipPath={`url(#${clipPathId})`}>
       <path d="M8 0V4" stroke="currentColor" strokeWidth="1.5" />
       <path
         d="M8 16V12"
@@ -71,13 +74,14 @@ const LoaderIcon = ({ size = 16 }: LoaderIconProps) => (
         strokeWidth="1.5"
       />
     </g>
-    <defs>
-      <clipPath id="clip0_2393_1490">
-        <rect fill="white" height="16" width="16" />
-      </clipPath>
-    </defs>
-  </svg>
-);
+      <defs>
+        <clipPath id={clipPathId}>
+          <rect fill="white" height="16" width="16" />
+        </clipPath>
+      </defs>
+    </svg>
+  );
+};
 
 export type LoaderProps = HTMLAttributes<HTMLDivElement> & {
   size?: number;

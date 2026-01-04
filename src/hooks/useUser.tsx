@@ -1,23 +1,19 @@
 import { useEffect } from 'react'
-import { useAuth } from '@workos-inc/authkit-react'
 import { useLocation } from '@tanstack/react-router'
+import { useAuth0 } from '@auth0/auth0-react'
 
-type UserOrNull = ReturnType<typeof useAuth>['user']
+type UserOrNull = ReturnType<typeof useAuth0>['user']
 
 // redirects to the sign-in page if the user is not signed in
 export const useUser = (): UserOrNull => {
-  const { user, isLoading, signIn } = useAuth()
+  const { user, isLoading, isAuthenticated, loginWithRedirect } = useAuth0()
   const location = useLocation()
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      signIn({
-        state: { returnTo: location.pathname },
-      })
-    } else {
-      console.log(user)
+    if (!isLoading && !isAuthenticated) {
+      loginWithRedirect({ appState: { returnTo: location.pathname } })
     }
-  }, [isLoading, user])
+  }, [isAuthenticated, isLoading, loginWithRedirect, location.pathname])
 
   return user
 }
