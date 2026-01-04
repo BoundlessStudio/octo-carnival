@@ -3,7 +3,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { convertToCoreMessages, streamText } from 'ai'
 import type { UIMessage } from 'ai'
 import { useChat } from 'ai/react'
-import { MockLanguageModelV3 } from 'ai/test'
+import { createOpenAI } from '@ai-sdk/openai'
 import { Brain, Sparkles } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useMemo } from 'react'
@@ -15,49 +15,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth0 } from '@auth0/auth0-react'
 
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
+
 const runChat = createServerFn({ method: 'POST' }).handler(
   async ({ data }) => {
     const messages = await convertToCoreMessages<UIMessage>(data?.messages ?? [])
-    const modelId = data?.modelId ?? 'tanstack-ai-helper'
-
-    const model = new MockLanguageModelV3({
-      modelId,
-      doStream: async () => ({
-        stream: new ReadableStream({
-          start(controller) {
-            controller.enqueue({
-              type: 'thinking',
-              thinking: 'Reviewing how TanStack Start and AI SDK integrate...',
-            })
-            controller.enqueue({
-              type: 'response',
-              content: [
-                {
-                  type: 'text-delta',
-                  textDelta:
-                    'Here is a concise walkthrough for TanStack + AI SDK: ',
-                },
-                {
-                  type: 'text-delta',
-                  textDelta: messages[messages.length - 1]?.content?.[0]?.text ?? '',
-                },
-              ],
-              sources: [
-                {
-                  id: 'guide',
-                  title: 'TanStack AI Starter',
-                  url: 'https://tanstack.com/start',
-                },
-              ],
-            })
-            controller.close()
-          },
-        }),
-      }),
-    })
+    const modelId = data?.modelId ?? 'gpt-4o-mini'
 
     const result = streamText({
-      model,
+      model: openai(modelId),
       messages,
       experimental_providerMetadata: { enableSources: true },
       experimental_thinking: { budgetTokens: 128 },
@@ -71,40 +39,13 @@ export const Route = createFileRoute('/ai')({ component: AiPlayground })
 
 function AiPlayground() {
   const { isAuthenticated, loginWithRedirect } = useAuth0()
-  const mockModel = useMemo(
-    () =>
-      new MockLanguageModelV3({
-        modelId: 'tanstack-ai-helper',
-        doStream: async () => ({
-          stream: new ReadableStream({
-            start(controller) {
-              controller.enqueue({
-                type: 'thinking',
-                thinking: 'Collecting the best TanStack AI guidance... ',
-              })
-              controller.enqueue({
-                type: 'response',
-                content: [
-                  {
-                    type: 'text-delta',
-                    textDelta:
-                      'Here is a concise walkthrough for TanStack + AI SDK: ',
-                  },
-                ],
-              })
-              controller.close()
-            },
-          }),
-        }),
-      }),
-    [],
-  )
+  const modelId = useMemo(() => 'gpt-4o-mini', [])
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, setInput } =
     useChat({
       id: 'tanstack-ai-demo',
       api: runChat.url,
-      body: { modelId: mockModel.modelId },
+      body: { modelId },
       experimental_thinking: true,
       experimental_sources: true,
       streamProtocol: 'data',
@@ -123,7 +64,7 @@ function AiPlayground() {
             Build AI features with TanStack, Auth0, and ai-elements
           </h1>
           <p className="text-lg text-gray-300 max-w-3xl mx-auto">
-            Authenticate with Auth0, prototype prompts with the AI SDK v6 mocks, and
+            Authenticate with Auth0, stream responses from OpenAI via the AI SDK, and
             showcase outputs using the ai-elements component primitives.
           </p>
         </header>
@@ -135,8 +76,8 @@ function AiPlayground() {
               <CardTitle className="text-xl">AI Studio</CardTitle>
             </div>
             <p className="text-sm text-gray-300">
-              Uses <code className="text-cyan-300">MockLanguageModelV3</code> from AI SDK v6 for
-              deterministic output without external API keys.
+              Powered by <code className="text-cyan-300">@ai-sdk/openai</code> with streaming
+              thinking traces and provider source metadata.
             </p>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -213,11 +154,12 @@ function AiPlayground() {
                 <h3 className="text-lg font-semibold text-white">What this demo shows</h3>
                 <ul className="list-disc space-y-2 pl-5">
                   <li>Auth0 protects AI interactions while keeping the router stateful.</li>
-                  <li>AI SDK v6 mocks make it easy to iterate without network calls.</li>
+                  <li>AI SDK streams OpenAI responses with reasoning and sources enabled.</li>
                   <li>ai-elements primitives render conversations with TanStack styling.</li>
                 </ul>
                 <p className="text-xs text-gray-400">
-                  Replace the mock model with a real provider from <code>ai</code> when you add secrets.
+                  Configure <code>OPENAI_API_KEY</code> to stream real outputs through the server
+                  route.
                 </p>
               </div>
             </div>
