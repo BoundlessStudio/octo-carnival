@@ -1,10 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { generateText } from 'ai'
+import { createServerFn } from '@tanstack/react-start'
+import { convertToCoreMessages, streamText } from 'ai'
 import type { UIMessage } from 'ai'
+import { useChat } from 'ai/react'
 import { MockLanguageModelV3 } from 'ai/test'
 import { Brain, Sparkles } from 'lucide-react'
 import { nanoid } from 'nanoid'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import { Conversation, ConversationContent, ConversationEmptyState } from '@/components/ai-elements/conversation'
 import { Message, MessageContent } from '@/components/ai-elements/message'
@@ -13,76 +15,101 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth0 } from '@auth0/auth0-react'
 
+const runChat = createServerFn({ method: 'POST' }).handler(
+  async ({ data }) => {
+    const messages = await convertToCoreMessages<UIMessage>(data?.messages ?? [])
+    const modelId = data?.modelId ?? 'tanstack-ai-helper'
+
+    const model = new MockLanguageModelV3({
+      modelId,
+      doStream: async () => ({
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({
+              type: 'thinking',
+              thinking: 'Reviewing how TanStack Start and AI SDK integrate...',
+            })
+            controller.enqueue({
+              type: 'response',
+              content: [
+                {
+                  type: 'text-delta',
+                  textDelta:
+                    'Here is a concise walkthrough for TanStack + AI SDK: ',
+                },
+                {
+                  type: 'text-delta',
+                  textDelta: messages[messages.length - 1]?.content?.[0]?.text ?? '',
+                },
+              ],
+              sources: [
+                {
+                  id: 'guide',
+                  title: 'TanStack AI Starter',
+                  url: 'https://tanstack.com/start',
+                },
+              ],
+            })
+            controller.close()
+          },
+        }),
+      }),
+    })
+
+    const result = streamText({
+      model,
+      messages,
+      experimental_providerMetadata: { enableSources: true },
+      experimental_thinking: { budgetTokens: 128 },
+    })
+
+    return result.toDataStreamResponse({ sendReasoning: true })
+  },
+)
+
 export const Route = createFileRoute('/ai')({ component: AiPlayground })
 
 function AiPlayground() {
   const { isAuthenticated, loginWithRedirect } = useAuth0()
-  const [prompt, setPrompt] = useState('How can TanStack Start and AI SDK work together?')
-  const [messages, setMessages] = useState<UIMessage[]>([])
-  const [isThinking, setIsThinking] = useState(false)
-
-  const model = useMemo(
+  const mockModel = useMemo(
     () =>
       new MockLanguageModelV3({
         modelId: 'tanstack-ai-helper',
-        doGenerate: async ({ prompt: incomingPrompt }) => ({
-          text:
-            'Here is a concise walkthrough for TanStack + AI SDK: ' +
-            incomingPrompt,
-          finishReason: 'stop',
-          usage: { promptTokens: 128, completionTokens: 256, totalTokens: 384 },
+        doStream: async () => ({
+          stream: new ReadableStream({
+            start(controller) {
+              controller.enqueue({
+                type: 'thinking',
+                thinking: 'Collecting the best TanStack AI guidance... ',
+              })
+              controller.enqueue({
+                type: 'response',
+                content: [
+                  {
+                    type: 'text-delta',
+                    textDelta:
+                      'Here is a concise walkthrough for TanStack + AI SDK: ',
+                  },
+                ],
+              })
+              controller.close()
+            },
+          }),
         }),
       }),
     [],
   )
 
-  const runPrompt = async () => {
-    if (!prompt.trim()) return
-
-    const userMessage: UIMessage = {
-      id: nanoid(),
-      role: 'user',
-      content: [{ type: 'text', text: prompt.trim() }],
-    }
-
-    setMessages((current) => [...current, userMessage])
-    setIsThinking(true)
-
-    try {
-      const result = await generateText({ model, prompt })
-
-      const assistantMessage: UIMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: [
-          {
-            type: 'text',
-            text: `${result.text}\n\nTokens used: ${result.usage?.totalTokens ?? 0}`,
-          },
-        ],
-      }
-
-      setMessages((current) => [...current, assistantMessage])
-      setPrompt('')
-    } catch (error) {
-      console.error('Failed to generate text', error)
-
-      const assistantMessage: UIMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: [
-          {
-            type: 'text',
-            text: 'An error occurred while generating the response.',
-          },
-        ],
-      }
-
-      setMessages((current) => [...current, assistantMessage])
-    } finally {
-      setIsThinking(false)
-    }
-  }
+  const { messages, input, handleInputChange, handleSubmit, isLoading, setInput } =
+    useChat({
+      id: 'tanstack-ai-demo',
+      api: runChat.url,
+      body: { modelId: mockModel.modelId },
+      experimental_thinking: true,
+      experimental_sources: true,
+      streamProtocol: 'data',
+      sendExtraMessageFields: true,
+    })
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -125,9 +152,24 @@ function AiPlayground() {
                   ) : (
                     <ConversationContent>
                       {messages.map((message) => (
-                        <Message key={message.id} from={message.role}>
+                        <Message key={message.id ?? nanoid()} from={message.role}>
                           <MessageContent>
-                            {message.content.map((contentPart, index) => (
+                            {'thinking' in message && message.thinking ? (
+                              <p className="text-sm text-cyan-200">{message.thinking}</p>
+                            ) : null}
+                            {'sources' in message && Array.isArray(message.sources) ? (
+                              <div className="mt-2 text-xs text-gray-400">
+                                <p className="font-semibold text-gray-200">Sources</p>
+                                <ul className="list-disc pl-4">
+                                  {message.sources.map((source) => (
+                                    <li key={source.id}>
+                                      {source.title} - <a className="underline" href={source.url}>{source.url}</a>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+                            {message.content?.map((contentPart, index) => (
                               <p key={`${message.id}-${index}`}>
                                 {'text' in contentPart ? contentPart.text : null}
                               </p>
@@ -138,24 +180,33 @@ function AiPlayground() {
                     </ConversationContent>
                   )}
                 </Conversation>
-                <div className="border-t border-slate-800 p-4 space-y-3">
+                <form
+                  className="border-t border-slate-800 p-4 space-y-3"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    if (isAuthenticated) {
+                      handleSubmit(event)
+                    } else {
+                      loginWithRedirect({ appState: { returnTo: '/ai' } })
+                    }
+                  }}
+                >
                   <Textarea
-                    value={prompt}
-                    onChange={(event) => setPrompt(event.target.value)}
+                    value={input}
+                    onChange={handleInputChange}
                     placeholder="Ask how TanStack works with your AI stack"
                     className="bg-slate-900"
                   />
                   <div className="flex items-center justify-end">
-                    <Button
-                      onClick={() =>
-                        isAuthenticated ? runPrompt() : loginWithRedirect({ appState: { returnTo: '/ai' } })
-                      }
-                      disabled={isThinking}
-                    >
-                      {isThinking ? 'Generating...' : isAuthenticated ? 'Send prompt' : 'Sign in to run'}
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading
+                        ? 'Streaming...'
+                        : isAuthenticated
+                          ? 'Send prompt with sources'
+                          : 'Sign in to run'}
                     </Button>
                   </div>
-                </div>
+                </form>
               </div>
 
               <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/60 p-4 text-sm text-gray-300">
