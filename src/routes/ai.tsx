@@ -10,7 +10,6 @@ import { Conversation, ConversationContent, ConversationEmptyState } from '@/com
 import { Message, MessageContent } from '@/components/ai-elements/message'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth0 } from '@auth0/auth0-react'
 
@@ -146,13 +145,7 @@ function AiPlayground() {
                     placeholder="Ask how TanStack works with your AI stack"
                     className="bg-slate-900"
                   />
-                  <div className="flex items-center gap-3">
-                    <Input
-                      value={prompt}
-                      onChange={(event) => setPrompt(event.target.value)}
-                      placeholder="Quick edit"
-                      className="bg-slate-900"
-                    />
+                  <div className="flex items-center justify-end">
                     <Button
                       onClick={() =>
                         isAuthenticated ? runPrompt() : loginWithRedirect({ appState: { returnTo: '/ai' } })
