@@ -15,7 +15,7 @@ export default function Auth0User() {
         variant="secondary"
         onClick={() => loginWithRedirect({ appState: { returnTo: '/' } })}
       >
-        Sign in with Auth0
+        Sign in
       </Button>
     )
   }
@@ -34,7 +34,7 @@ export default function Auth0User() {
           <p className="text-xs text-gray-300">{user?.email}</p>
         </div>
       </div>
-      <Button variant="outline" onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>
+      <Button variant="secondary" onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>
         Sign Out
       </Button>
     </div>

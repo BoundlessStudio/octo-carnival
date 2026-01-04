@@ -6,6 +6,9 @@ import viteTsConfigPaths from 'vite-tsconfig-paths'
 import tailwindcss from '@tailwindcss/vite'
 
 const config = defineConfig({
+  server: {
+    allowedHosts: ['eneida-fizzier-predeliberately.ngrok-free.dev'],
+  },
   plugins: [
     devtools(),
     // this is the plugin that enables path aliases
