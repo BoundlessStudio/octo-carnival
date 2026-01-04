@@ -49,22 +49,40 @@ function AiPlayground() {
     setMessages((current) => [...current, userMessage])
     setIsThinking(true)
 
-    const result = await generateText({ model, prompt })
+    try {
+      const result = await generateText({ model, prompt })
 
-    const assistantMessage: UIMessage = {
-      id: nanoid(),
-      role: 'assistant',
-      content: [
-        {
-          type: 'text',
-          text: `${result.text}\n\nTokens used: ${result.usage?.totalTokens ?? 0}`,
-        },
-      ],
+      const assistantMessage: UIMessage = {
+        id: nanoid(),
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: `${result.text}\n\nTokens used: ${result.usage?.totalTokens ?? 0}`,
+          },
+        ],
+      }
+
+      setMessages((current) => [...current, assistantMessage])
+      setPrompt('')
+    } catch (error) {
+      console.error('Failed to generate text', error)
+
+      const assistantMessage: UIMessage = {
+        id: nanoid(),
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'An error occurred while generating the response.',
+          },
+        ],
+      }
+
+      setMessages((current) => [...current, assistantMessage])
+    } finally {
+      setIsThinking(false)
     }
-
-    setMessages((current) => [...current, assistantMessage])
-    setPrompt('')
-    setIsThinking(false)
   }
 
   return (
